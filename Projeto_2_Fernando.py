@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -21,6 +22,31 @@ from sklearn.metrics import (
 data = load_breast_cancer()
 X = data.data
 y = data.target
+
+df = pd.DataFrame(data.data, columns=data.feature_names)
+df['target'] = data.target
+
+# Matriz de Correlação
+plt.figure(figsize=(20,20))
+correlation_matrix = df.corr()
+sns.heatmap(correlation_matrix, annot=True, cmap='mako', fmt=".0%")
+plt.title('Matriz de Correlação')
+plt.show()
+
+#Grafico de disperção 
+cols = ['target',
+        'mean radius', 
+        'mean texture', 
+        'mean perimeter', 
+        'mean area',
+        'mean smoothness',
+        'mean compactness',
+        'mean concavity',
+        'mean concave points',
+        'mean symmetry',
+        'mean fractal dimension']
+
+sns.pairplot(data=df[cols], hue='target', palette='mako')
 
 # Dividir o conjunto de dados em treinamento e teste
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=42)
@@ -115,5 +141,6 @@ for result in results:
 plt.xlabel('Algoritmo')
 plt.ylabel('Acurácia (CV)')
 plt.title('Comparação de Desempenho de Algoritmos')
+plt.grid()
 plt.legend()
 plt.show()
