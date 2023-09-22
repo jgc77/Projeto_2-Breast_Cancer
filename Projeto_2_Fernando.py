@@ -17,11 +17,19 @@ from sklearn.metrics import (
     auc,
     roc_auc_score,
 )
+from sklearn.tree import plot_tree
+from sklearn.model_selection import learning_curve
+from sklearn.preprocessing import StandardScaler
+from mlxtend.plotting import plot_decision_regions
 
 # Carregar o conjunto de dados
 data = load_breast_cancer()
 X = data.data
 y = data.target
+
+# Normalizar os dados
+scaler = StandardScaler()
+x_normalized = scaler.fit_transform(X)
 
 df = pd.DataFrame(data.data, columns=data.feature_names)
 df['target'] = data.target
@@ -49,7 +57,7 @@ cols = ['target',
 sns.pairplot(data=df[cols], hue='target', palette='mako')
 
 # Dividir o conjunto de dados em treinamento e teste
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(x_normalized, y, test_size=0.5, random_state=42)
 
 # Algoritmo 1: SVM (Support Vector Machine)
 svm_classifier = SVC(kernel='linear', C=1, gamma='scale', probability=True)
@@ -58,13 +66,14 @@ svm_classifier = SVC(kernel='linear', C=1, gamma='scale', probability=True)
 knn_classifier = KNeighborsClassifier(n_neighbors=5)
 
 # Algoritmo 3: Random Forest
-rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_classifier = RandomForestClassifier(n_estimators=100,max_depth=4, random_state=42)
 
 # Lista de algoritmos
 classifiers = [('SVM', svm_classifier), ('KNN', knn_classifier), ('Random Forest', rf_classifier)]
 
 # Realizar a validação cruzada e avaliar o desempenho dos modelos
 results = []
+
 
 for name, classifier in classifiers:
     # Realizar validação cruzada
@@ -89,6 +98,149 @@ for name, classifier in classifiers:
     
     # Matriz de confusão
     cm = confusion_matrix(y_test, y_pred)
+
+    # 
+    if name == 'Random Forest' :
+        # Plotando uma árvore de decisão individual da Floresta Aleatória
+        plt.figure(figsize=(15, 10))
+        plot_tree(classifier.estimators_[0], class_names=[str(i) for i in data.target_names], filled=True, rounded=True, fontsize=6)
+        plt.show()
+         # Calculando as curvas de aprendizado
+        train_sizes, train_scores, test_scores = learning_curve(classifier, x_normalized, y, cv=5, scoring='accuracy', n_jobs=-1)
+
+        # Calculando as médias e desvios padrão das pontuações em treinamento e teste
+        train_scores_mean = np.mean(train_scores, axis=1)
+        train_scores_std = np.std(train_scores, axis=1)
+        test_scores_mean = np.mean(test_scores, axis=1)
+        test_scores_std = np.std(test_scores, axis=1)
+
+        # Plotando as curvas de aprendizado
+        plt.figure(figsize=(10, 6))
+        plt.title("Curva de Aprendizado (Learning Curve) RF")
+        plt.xlabel("Tamanho do Conjunto de Treinamento")
+        plt.ylabel("Precisão")
+        plt.grid()
+
+        plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                        train_scores_mean + train_scores_std, alpha=0.1, color="r")
+        plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                        test_scores_mean + test_scores_std, alpha=0.1, color="g")
+        plt.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Treinamento")
+        plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Teste")
+
+        plt.legend(loc="best")
+        plt.show()
+
+        # Plotando Fronteiras de decisão
+        # Criar um modelo de árvore de decisão que aceita apenas duas características
+        #model_RandomForest = RandomForestClassifier(n_estimators=100,max_depth=2, random_state=42)
+
+        # Ajustar o modelo aos dados de treinamento com apenas as duas características selecionadas
+        classifier.fit(X_train[:, [27, 10]], y_train)
+        # Use apenas as duas características selecionadas
+        x_test_selected = X_test[:, [27, 10]]
+
+        plot_decision_regions(x_test_selected, y_test, clf=classifier)
+        plt.xlabel(data.feature_names[27])
+        plt.ylabel(data.feature_names[10])
+        plt.title('Fronteiras de Decisão')
+
+        # Adicionando a legenda
+        plt.legend(title="Breast Cancer")
+        plt.show()
+
+        
+      
+    if name == 'SVM' :
+      # Calculando as curvas de aprendizado
+      train_sizes, train_scores, test_scores = learning_curve(classifier, x_normalized, y, cv=5, scoring='accuracy', n_jobs=-1)
+
+      # Calculando as médias e desvios padrão das pontuações em treinamento e teste
+      train_scores_mean = np.mean(train_scores, axis=1)
+      train_scores_std = np.std(train_scores, axis=1)
+      test_scores_mean = np.mean(test_scores, axis=1)
+      test_scores_std = np.std(test_scores, axis=1)
+
+      # Plotando as curvas de aprendizado
+      plt.figure(figsize=(10, 6))
+      plt.title("Curva de Aprendizado (Learning Curve) SVM")
+      plt.xlabel("Tamanho do Conjunto de Treinamento")
+      plt.ylabel("Precisão")
+      plt.grid()
+
+      plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                      train_scores_mean + train_scores_std, alpha=0.1, color="r")
+      plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                      test_scores_mean + test_scores_std, alpha=0.1, color="g")
+      plt.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Treinamento")
+      plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Teste")
+
+      plt.legend(loc="best")
+      plt.show()
+      # Plotando Fronteiras de decisão
+      # Criar um modelo de SVM que aceita apenas duas características
+      #model_SVM = SVC(kernel='linear', C=1, gamma='scale', probability=True)
+
+      # Ajustar o modelo aos dados de treinamento com apenas as duas características selecionadas
+      classifier.fit(X_train[:, [27, 10]], y_train)
+
+      # Use apenas as duas características selecionadas
+      x_test_selected = X_test[:, [27, 10]]
+
+      plot_decision_regions(x_test_selected, y_test, clf=classifier)
+      plt.xlabel(data.feature_names[27])
+      plt.ylabel(data.feature_names[10])
+      plt.title('Fronteiras de Decisão')
+
+      # Adicionando a legenda
+      plt.legend(title="Breast Cancer")
+      plt.show()
+
+    if name == 'KNN' :
+      # Calculando as curvas de aprendizado
+      train_sizes, train_scores, test_scores = learning_curve(classifier, x_normalized, y, cv=5, scoring='accuracy', n_jobs=-1)
+
+      # Calculando as médias e desvios padrão das pontuações em treinamento e teste
+      train_scores_mean = np.mean(train_scores, axis=1)
+      train_scores_std = np.std(train_scores, axis=1)
+      test_scores_mean = np.mean(test_scores, axis=1)
+      test_scores_std = np.std(test_scores, axis=1)
+
+      # Plotando as curvas de aprendizado
+      plt.figure(figsize=(10, 6))
+      plt.title("Curva de Aprendizado (Learning Curve) KNN")
+      plt.xlabel("Tamanho do Conjunto de Treinamento")
+      plt.ylabel("Precisão")
+      plt.grid()
+
+      plt.fill_between(train_sizes, train_scores_mean - train_scores_std,
+                      train_scores_mean + train_scores_std, alpha=0.1, color="r")
+      plt.fill_between(train_sizes, test_scores_mean - test_scores_std,
+                      test_scores_mean + test_scores_std, alpha=0.1, color="g")
+      plt.plot(train_sizes, train_scores_mean, 'o-', color="r", label="Treinamento")
+      plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Teste")
+
+      plt.legend(loc="best")
+      plt.show()
+
+      # Plotando Fronteiras de decisão
+      # Criar um modelo de SVM que aceita apenas duas características
+      #model_KNN = SVC(kernel='linear', C=1, gamma='scale', probability=True)
+
+      # Ajustar o modelo aos dados de treinamento com apenas as duas características selecionadas
+      classifier.fit(X_train[:, [27, 10]], y_train)
+
+      # Use apenas as duas características selecionadas
+      x_test_selected = X_test[:, [27, 10]]
+
+      plot_decision_regions(x_test_selected, y_test, clf=classifier)
+      plt.xlabel(data.feature_names[27])
+      plt.ylabel(data.feature_names[10])
+      plt.title('Fronteiras de Decisão')
+
+      # Adicionando a legenda
+      plt.legend(title="Breast Cancer")
+      plt.show()
     
     results.append({
         'Algoritmo': name,
@@ -100,9 +252,9 @@ for name, classifier in classifiers:
         'AUC': auc_score,
         'Matriz de Confusão': cm,
         'fpr' : fpr,
-        'tpr' : tpr
+        'tpr' : tpr,
     })
-
+  
 # Exibir os resultados
 for result in results:
     print(f"Algoritmo: {result['Algoritmo']}")
@@ -133,6 +285,8 @@ for result in results:
     plt.ylabel('True Labels')
     plt.title(f'Confusion Matrix ({result["Algoritmo"]})')
     plt.show()
+
+    
 
 # Gráfico de comparação de desempenho
 plt.figure(figsize=(10, 6))
