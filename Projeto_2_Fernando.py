@@ -102,8 +102,8 @@ for name, classifier in classifiers:
     # 
     if name == 'Random Forest' :
         # Plotando uma árvore de decisão individual da Floresta Aleatória
-        plt.figure(figsize=(15, 10))
-        plot_tree(classifier.estimators_[0], class_names=[str(i) for i in data.target_names], filled=True, rounded=True, fontsize=6)
+        plt.figure(figsize=(25, 20))
+        plot_tree(classifier.estimators_[0], class_names=[str(i) for i in data.target_names], filled=True, rounded=True, fontsize=8)
         plt.show()
          # Calculando as curvas de aprendizado
         train_sizes, train_scores, test_scores = learning_curve(classifier, x_normalized, y, cv=5, scoring='accuracy', n_jobs=-1)
